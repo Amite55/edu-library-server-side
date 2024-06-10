@@ -68,6 +68,13 @@ const client = new MongoClient(uri, {
        res.send(result);
     })
 
+    app.get('/borrowed/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = {email: email};
+      const result = await borrowedBooksCollection.find(query).toArray();
+      res.send(result);
+    })
+
 
       // Send a ping to confirm a successful connection
       await client.db("admin").command({ ping: 1 });

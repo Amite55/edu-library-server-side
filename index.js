@@ -36,11 +36,17 @@ const client = new MongoClient(uri, {
     try {
 
         const booksCollection = client.db('eduLibrary').collection('books');
+        const borrowedBooksCollection = client.db('eduLibrary').collection('borrowed');
 
       // Connect the client to the server	(optional starting in v4.7)
     //   await client.connect();
 
-
+    
+    app.post('/book', async (req, res) => {
+      const savedBooks = req.body;
+      const result = await booksCollection.insertOne(savedBooks);
+      res.send(result);
+    })
 
     app.get('/books', async (req, res) => {
         const result = await booksCollection.find().toArray();
@@ -55,6 +61,13 @@ const client = new MongoClient(uri, {
       // console.log(result);
       res.send(result);
     })
+
+    app.post('/borrowed', async (req, res) => {
+       const borrowedData = req.body;
+       const result = await borrowedBooksCollection.insertOne(borrowedData);
+       res.send(result);
+    })
+
 
       // Send a ping to confirm a successful connection
       await client.db("admin").command({ ping: 1 });

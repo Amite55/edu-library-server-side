@@ -62,6 +62,23 @@ const client = new MongoClient(uri, {
       res.send(result);
     })
 
+    app.put('/book/:id', async (req, res) => {
+      const id = req.params.id;
+      const bookData = req.body;
+      const query = {_id: new ObjectId(id)};
+      const options = {upsert: true}
+      const updateDoc = {
+        $set: {
+          ...bookData,
+        }
+      }
+
+      const result = await booksCollection.updateOne(query, updateDoc, options)
+      console.log(result);
+      res.send(result)
+
+    })
+
     app.post('/borrowed', async (req, res) => {
        const borrowedData = req.body;
        const result = await borrowedBooksCollection.insertOne(borrowedData);
@@ -72,6 +89,13 @@ const client = new MongoClient(uri, {
       const email = req.params.email;
       const query = {email: email};
       const result = await borrowedBooksCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    app.delete('/borrowed/:id', async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await borrowedBooksCollection.deleteOne(query);
       res.send(result);
     })
 

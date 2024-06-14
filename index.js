@@ -9,9 +9,9 @@ const port = process.env.PORT || 5000;
 const app = express();
 
 const corsOptions = {
-    origin: ['http://localhost:5173'],
-    credentials: true,
-    optionSuccessStatus : 200
+  origin: ['http://localhost:5173'],
+  credentials: true,
+  optionSuccessStatus: 200
 }
 
 
@@ -19,6 +19,24 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
+// jwt.verify and middleware==================================
+const verifyToken = async (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: 'unauthorized access' })
+  }
+  if (token) {
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+      if (err) {
+        console.log(err);
+        return res.status(401).send({ message: 'unauthorized' })
+      }
+      console.log(decoded);
+      req.user = decoded;
+      next();
+    })
+  }
+}
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.g2fbusk.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -28,24 +46,24 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true,
-    }
-  });
-  async function run() {
-    try {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
+async function run() {
+  try {
 
-        const booksCollection = client.db('eduLibrary').collection('books');
-        const borrowedBooksCollection = client.db('eduLibrary').collection('borrowed');
+    const booksCollection = client.db('eduLibrary').collection('books');
+    const borrowedBooksCollection = client.db('eduLibrary').collection('borrowed');
 
-      // Connect the client to the server	(optional starting in v4.7)
+    // Connect the client to the server	(optional starting in v4.7)
     //   await client.connect();
 
     // jwt create ===========================================
 
-    app.post('/jwt', async(req, res) => {
+    app.post('/jwt', async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: '365d'
@@ -54,7 +72,7 @@ const client = new MongoClient(uri, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-      }).send({success: true})
+      }).send({ success: true })
     })
 
     // jwt clear =======================================
@@ -64,34 +82,35 @@ const client = new MongoClient(uri, {
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
         maxAge: 0,
-      }).send({success: true})
+      }).send({ success: true })
     })
 
-    
-    app.post('/book', async (req, res) => {
+
+    app.post('/book', verifyToken, async (req, res) => {
       const savedBooks = req.body;
       const result = await booksCollection.insertOne(savedBooks);
       res.send(result);
     })
 
-    app.get('/books', async (req, res) => {
-      const token = req.cookies?.token;
-      if(token){
-        jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-          if(err){
-            console.log(err);
-          }
-          console.log(decoded);
-        })
-      }
-      console.log(token);
+
+    app.get('/books', verifyToken, async (req, res) => {
+
+
+      const tokenEmail = req.query.email;
+      console.log(tokenEmail, 'from user token ');
+      // let query = {};
+      // if(req.query?.email){
+      //   query = {email: req.query?.email}
+      // }
+      // console.log(query, 'this is query line 102');
+
       const result = await booksCollection.find().toArray();
       res.send(result);
     })
 
     app.get('/book/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       // console.log(query);
       const result = await booksCollection.findOne(query);
       // console.log(result);
@@ -101,8 +120,8 @@ const client = new MongoClient(uri, {
     app.put('/book/:id', async (req, res) => {
       const id = req.params.id;
       const bookData = req.body;
-      const query = {_id: new ObjectId(id)};
-      const options = {upsert: true}
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true }
       const updateDoc = {
         $set: {
           ...bookData,
@@ -116,41 +135,51 @@ const client = new MongoClient(uri, {
     })
 
     app.post('/borrowed', async (req, res) => {
-       const borrowedData = req.body;
-       const result = await borrowedBooksCollection.insertOne(borrowedData);
-       res.send(result);
+      const borrowedData = req.body;
+      
+      const result = await borrowedBooksCollection.insertOne(borrowedData);
+      
+      // // decrement to bookcollaction quantity -----------------------
+      // const quantity = borrowedData.quantity
+      // const updateDoc = {
+      //   $inc: {quantity: -1},
+      // }
+      // const decrementBookQ = await booksCollection.updateOne(updateDoc)
+      // console.log(decrementBookQ);
+
+      res.send(result);
     })
 
     app.get('/borrowed/:email', async (req, res) => {
       const email = req.params.email;
-      const query = {email: email};
+      const query = { email: email };
       const result = await borrowedBooksCollection.find(query).toArray();
       res.send(result);
     })
 
-    app.delete('/borrowed/:id', async(req, res) => {
+    app.delete('/borrowed/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) }
       const result = await borrowedBooksCollection.deleteOne(query);
       res.send(result);
     })
 
 
-      // Send a ping to confirm a successful connection
-      await client.db("admin").command({ ping: 1 });
-      console.log("Pinged your deployment. You successfully connected to MongoDB!");
-    } finally {
-      // Ensures that the client will close when you finish/error
+    // Send a ping to confirm a successful connection
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  } finally {
+    // Ensures that the client will close when you finish/error
     //   await client.close();
-    }
   }
-  run().catch(console.dir);
+}
+run().catch(console.dir);
 
 
-app.get('/', ( req, res) => {
-    res.send('edu library running ')
+app.get('/', (req, res) => {
+  res.send('edu library running ')
 })
 
 app.listen(port, () => {
-    console.log(`Edu Library server on Port ${port}`);
+  console.log(`Edu Library server on Port ${port}`);
 })

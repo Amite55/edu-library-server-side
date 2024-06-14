@@ -9,7 +9,7 @@ const port = process.env.PORT || 5000;
 const app = express();
 
 const corsOptions = {
-  origin: ['http://localhost:5173'],
+  origin: ['http://localhost:5173', 'edu-library-920fc.web.app', 'edu-library-920fc.firebaseapp.com'],
   credentials: true,
   optionSuccessStatus: 200
 }
@@ -70,7 +70,7 @@ async function run() {
       })
       res.cookie('token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' ? true : false,
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
       }).send({ success: true })
     })
@@ -79,7 +79,7 @@ async function run() {
     app.get('/logout', (req, res) => {
       res.clearCookie('token', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' ? true : false,
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
         maxAge: 0,
       }).send({ success: true })
@@ -139,13 +139,14 @@ async function run() {
       
       const result = await borrowedBooksCollection.insertOne(borrowedData);
       
-      // // decrement to bookcollaction quantity -----------------------
-      // const quantity = borrowedData.quantity
-      // const updateDoc = {
-      //   $inc: {quantity: -1},
-      // }
-      // const decrementBookQ = await booksCollection.updateOne(updateDoc)
-      // console.log(decrementBookQ);
+       // decrement to bookcollaction quantity -----------------------
+
+      const filter = {_id: new ObjectId ( borrowedData.bookId)}
+      const updateDoc = {
+        $inc: {quantity: -1},
+      }
+      const decrementBookQ = await booksCollection.updateOne(filter, updateDoc)
+      console.log(decrementBookQ);
 
       res.send(result);
     })
@@ -159,14 +160,23 @@ async function run() {
 
     app.delete('/borrowed/:id', async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
+      const query = { _id: new ObjectId(id)}
       const result = await borrowedBooksCollection.deleteOne(query);
+
+      // increment to book quantity =======================
+      const filter = {_Id: new ObjectId(id)}
+      const updateDoc = {
+        $inc: {quantity: 1},
+      }
+      const decrementBookQ = await booksCollection.updateOne(filter, updateDoc)
+      console.log(decrementBookQ);
+
       res.send(result);
     })
 
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error

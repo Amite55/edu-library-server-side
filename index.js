@@ -8,12 +8,19 @@ const port = process.env.PORT || 5000;
 
 const app = express();
 
+// const corsOptions = {
+//   origin: ['http://localhost:5173', 'http://edu-library-920fc.web.app', 'http://edu-library-920fc.firebaseapp.com'],
+//   credentials: true,
+//   optionSuccessStatus: 200
+// }
+
+
+
 const corsOptions = {
-  origin: ['http://localhost:5173', 'edu-library-920fc.web.app', 'edu-library-920fc.firebaseapp.com'],
+  origin: ['http://localhost:5173', 'http://edu-library-920fc.web.app', 'http://edu-library-920fc.firebaseapp.com'],
   credentials: true,
   optionSuccessStatus: 200
-}
-
+};
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -93,17 +100,7 @@ async function run() {
     })
 
 
-    app.get('/books', verifyToken, async (req, res) => {
-
-
-      const tokenEmail = req.query.email;
-      console.log(tokenEmail, 'from user token ');
-      // let query = {};
-      // if(req.query?.email){
-      //   query = {email: req.query?.email}
-      // }
-      // console.log(query, 'this is query line 102');
-
+    app.get('/books',  async (req, res) => {
       const result = await booksCollection.find().toArray();
       res.send(result);
     })

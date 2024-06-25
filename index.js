@@ -17,7 +17,7 @@ const app = express();
 
 
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://edu-library-920fc.web.app', 'http://edu-library-920fc.firebaseapp.com'],
+  origin: ['http://localhost:5173', 'https://edu-library-920fc.web.app', 'https://edu-library-920fc.firebaseapp.com'],
   credentials: true,
   optionSuccessStatus: 200
 };
